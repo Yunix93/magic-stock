@@ -1,0 +1,19 @@
+# Docker配置目录
+
+此目录用于存储Docker相关的配置文件。
+
+## 规划内容
+- Dockerfile (多阶段构建配置)
+- docker-compose.yml (服务编排配置)
+- nginx.conf (Nginx反向代理配置)
+- 环境特定的Docker配置文件
+
+## 使用说明
+- 开发环境: docker-compose.dev.yml
+- 测试环境: docker-compose.test.yml  
+- 生产环境: docker-compose.prod.yml
+
+## 注意事项
+- 不要在Docker配置中硬编码敏感信息
+- 使用环境变量管理配置
+- 确保镜像安全和最小化原则

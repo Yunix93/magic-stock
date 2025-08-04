@@ -1,0 +1,21 @@
+# 生产环境依赖
+-r base.txt
+
+# 生产服务器
+gunicorn>=21.2.0
+gevent>=23.7.0
+
+# 监控和日志
+sentry-sdk[flask]>=1.32.0
+prometheus-client>=0.17.0
+
+# 安全增强
+flask-talisman>=1.1.0
+flask-limiter>=3.5.0
+
+# 性能优化
+flask-compress>=1.13.0
+redis-py-cluster>=2.1.0
+
+# 部署工具
+supervisor>=4.2.0

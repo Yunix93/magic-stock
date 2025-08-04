@@ -1,0 +1,24 @@
+# 测试环境依赖
+-r base.txt
+
+# 测试框架
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-flask>=1.2.0
+pytest-mock>=3.11.0
+pytest-xdist>=3.3.0  # 并行测试
+
+# 测试数据
+factory-boy>=3.3.0
+faker>=19.3.0
+
+# 端到端测试
+selenium>=4.11.0
+webdriver-manager>=4.0.0
+
+# 性能测试
+locust>=2.16.0
+
+# 测试报告
+pytest-html>=3.2.0
+coverage>=7.3.0

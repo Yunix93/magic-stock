@@ -1,0 +1,9 @@
+# 现代化后台管理系统依赖
+# 使用分层依赖管理，根据环境选择对应的requirements文件
+
+# 开发环境使用：pip install -r requirements/development.txt
+# 生产环境使用：pip install -r requirements/production.txt
+# 测试环境使用：pip install -r requirements/testing.txt
+
+# 默认安装开发环境依赖
+-r requirements/development.txt
