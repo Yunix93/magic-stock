@@ -76,6 +76,29 @@ def get_session() -> Session:
     return _session_factory()
 
 
+@contextmanager
+def get_db_session(session=None):
+    """
+    数据库会话上下文管理器
+    
+    Args:
+        session: 可选的外部会话，如果提供则使用外部会话，否则创建新会话
+        
+    Yields:
+        Session: 数据库会话对象
+    """
+    if session is not None:
+        # 使用外部提供的会话，不关闭
+        yield session
+    else:
+        # 创建新会话，需要关闭
+        new_session = get_session()
+        try:
+            yield new_session
+        finally:
+            new_session.close()
+
+
 def create_tables():
     """创建所有数据表"""
     from app.models.base import Base

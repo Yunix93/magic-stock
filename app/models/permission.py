@@ -249,13 +249,12 @@ class Permission(BaseModel):
         """获取所有资源名称"""
         try:
             from sqlalchemy import distinct
-            from app.models.base import db_session
+            import importlib
+            database_module = importlib.import_module('app.core.database')
             
-            if not db_session:
-                return []
-            
-            result = db_session.query(distinct(cls.resource)).all()
-            return [r[0] for r in result if r[0]]
+            with database_module.get_db_session() as db_session:
+                result = db_session.query(distinct(cls.resource)).all()
+                return [r[0] for r in result if r[0]]
         except:
             return []
     
@@ -264,13 +263,12 @@ class Permission(BaseModel):
         """获取所有操作类型"""
         try:
             from sqlalchemy import distinct
-            from app.models.base import db_session
+            import importlib
+            database_module = importlib.import_module('app.core.database')
             
-            if not db_session:
-                return []
-            
-            result = db_session.query(distinct(cls.action)).all()
-            return [a[0] for a in result if a[0]]
+            with database_module.get_db_session() as db_session:
+                result = db_session.query(distinct(cls.action)).all()
+                return [a[0] for a in result if a[0]]
         except:
             return []
     
@@ -279,13 +277,12 @@ class Permission(BaseModel):
         """获取所有权限分组"""
         try:
             from sqlalchemy import distinct
-            from app.models.base import db_session
+            import importlib
+            database_module = importlib.import_module('app.core.database')
             
-            if not db_session:
-                return []
-            
-            result = db_session.query(distinct(cls.group)).filter(cls.group.isnot(None)).all()
-            return [g[0] for g in result if g[0]]
+            with database_module.get_db_session() as db_session:
+                result = db_session.query(distinct(cls.group)).filter(cls.group.isnot(None)).all()
+                return [g[0] for g in result if g[0]]
         except:
             return []
     
