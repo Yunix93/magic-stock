@@ -103,29 +103,39 @@ class Permission(BaseModel):
         
         super().__init__(**kwargs)
     
-    def get_roles(self) -> List['Role']:
+    def get_roles(self, session=None) -> List['Role']:
         """获取拥有此权限的所有角色"""
-        from app.models.associations import RolePermission
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        RolePermission = associations_module.RolePermission
         
-        return RolePermission.get_roles_by_permission(self.id)
+        return RolePermission.get_roles_by_permission(self.id, session=session)
     
-    def get_role_count(self) -> int:
+    def get_role_count(self, session=None) -> int:
         """获取拥有此权限的角色数量"""
-        from app.models.associations import RolePermission
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        RolePermission = associations_module.RolePermission
         
-        return RolePermission.count_roles_by_permission(self.id)
+        return RolePermission.count_roles_by_permission(self.id, session=session)
     
-    def get_users(self) -> List['User']:
+    def get_users(self, session=None) -> List['User']:
         """获取通过角色拥有此权限的所有用户"""
-        from app.models.associations import RolePermission, UserRole
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        RolePermission = associations_module.RolePermission
+        UserRole = associations_module.UserRole
         
         # 获取拥有此权限的角色
-        roles = self.get_roles()
+        roles = self.get_roles(session=session)
         
         # 获取这些角色的用户
         users = []
         for role in roles:
-            role_users = UserRole.get_users_by_role(role.id)
+            role_users = UserRole.get_users_by_role(role.id, session=session)
             users.extend(role_users)
         
         # 去重

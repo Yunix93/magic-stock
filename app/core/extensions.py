@@ -202,7 +202,8 @@ def init_logging(server):
 
 def get_db_session():
     """获取数据库会话"""
-    return db_session
+    from app.core.database import get_session
+    return get_session()
 
 
 def get_redis_client():

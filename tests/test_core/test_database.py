@@ -8,6 +8,7 @@
 import os
 import sys
 import tempfile
+import pytest
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -79,6 +80,7 @@ def test_sqlite_connection():
         print(f"❌ SQLite连接测试失败: {e}")
         return False
 
+@pytest.mark.skip(reason="需要真实的PostgreSQL数据库连接")
 def test_postgres_connection(database_url):
     """测试PostgreSQL连接"""
     try:
@@ -104,6 +106,7 @@ def test_postgres_connection(database_url):
         print(f"❌ PostgreSQL连接测试失败: {e}")
         return False
 
+@pytest.mark.skip(reason="需要真实的MySQL数据库连接")
 def test_mysql_connection(database_url):
     """测试MySQL连接"""
     try:

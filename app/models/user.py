@@ -415,14 +415,19 @@ class User(BaseModel):
         
         return cls.filter_by().filter(search_filter).limit(limit).all()
     
-    def add_role(self, role, assigned_by: str = None) -> bool:
+    def add_role(self, role, assigned_by: str = None, session=None) -> bool:
         """为用户添加角色"""
-        from app.models.role import Role
-        from app.models.associations import UserRole
+        # 延迟导入避免循环依赖
+        import importlib
+        role_module = importlib.import_module('app.models.role')
+        associations_module = importlib.import_module('app.models.associations')
+        
+        Role = role_module.Role
+        UserRole = associations_module.UserRole
         
         if isinstance(role, str):
             # 如果传入的是角色名称，查找角色对象
-            role_obj = Role.get_by_name(role)
+            role_obj = Role.get_by_name(role, session=session)
             if not role_obj:
                 raise ValidationError(f"角色 {role} 不存在")
             role = role_obj
@@ -431,17 +436,22 @@ class User(BaseModel):
             raise ValidationError("角色对象类型错误")
         
         # 创建用户角色关联
-        user_role = UserRole.assign_role_to_user(self.id, role.id, assigned_by)
+        user_role = UserRole.assign_role_to_user(self.id, role.id, assigned_by, session=session)
         return user_role is not None
     
-    def remove_role(self, role) -> bool:
+    def remove_role(self, role, session=None) -> bool:
         """从用户移除角色"""
-        from app.models.role import Role
-        from app.models.associations import UserRole
+        # 延迟导入避免循环依赖
+        import importlib
+        role_module = importlib.import_module('app.models.role')
+        associations_module = importlib.import_module('app.models.associations')
+        
+        Role = role_module.Role
+        UserRole = associations_module.UserRole
         
         if isinstance(role, str):
             # 如果传入的是角色名称，查找角色对象
-            role_obj = Role.get_by_name(role)
+            role_obj = Role.get_by_name(role, session=session)
             if not role_obj:
                 raise ValidationError(f"角色 {role} 不存在")
             role = role_obj
@@ -449,37 +459,49 @@ class User(BaseModel):
         if not isinstance(role, Role):
             raise ValidationError("角色对象类型错误")
         
-        return UserRole.remove_role_from_user(self.id, role.id)
+        return UserRole.remove_role_from_user(self.id, role.id, session=session)
     
-    def has_role(self, role_name: str) -> bool:
+    def has_role(self, role_name: str, session=None) -> bool:
         """检查用户是否拥有指定角色"""
-        from app.models.associations import UserRole
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        UserRole = associations_module.UserRole
         
-        return UserRole.user_has_role(self.id, role_name)
+        return UserRole.user_has_role(self.id, role_name, session=session)
     
-    def has_permission(self, permission_name: str) -> bool:
+    def has_permission(self, permission_name: str, session=None) -> bool:
         """检查用户是否拥有指定权限"""
-        from app.models.associations import RolePermission
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        RolePermission = associations_module.RolePermission
         
-        return RolePermission.user_has_permission(self.id, permission_name)
+        return RolePermission.user_has_permission(self.id, permission_name, session=session)
     
-    def get_roles(self) -> List['Role']:
+    def get_roles(self, session=None) -> List['Role']:
         """获取用户的所有角色"""
-        from app.models.associations import UserRole
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        UserRole = associations_module.UserRole
         
-        return UserRole.get_roles_by_user(self.id)
+        return UserRole.get_roles_by_user(self.id, session=session)
     
-    def get_permissions(self) -> List['Permission']:
+    def get_permissions(self, session=None) -> List['Permission']:
         """获取用户通过角色拥有的所有权限"""
-        from app.models.associations import RolePermission
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        RolePermission = associations_module.RolePermission
         
         # 获取用户的所有角色
-        roles = self.get_roles()
+        roles = self.get_roles(session=session)
         
         # 获取这些角色的所有权限
         permissions = []
         for role in roles:
-            role_permissions = RolePermission.get_permissions_by_role(role.id)
+            role_permissions = RolePermission.get_permissions_by_role(role.id, session=session)
             permissions.extend(role_permissions)
         
         # 去重

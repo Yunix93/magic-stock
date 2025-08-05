@@ -128,51 +128,72 @@ class BaseModel(Base):
         self.deleted_at = None
     
     @classmethod
-    def create(cls, **kwargs):
+    def create(cls, session=None, **kwargs):
         """创建新实例"""
-        from app.core.database import get_session
-        session = get_session()
+        if session is None:
+            from app.core.database import get_session
+            session = get_session()
+            should_close = True
+        else:
+            should_close = False
+            
         try:
             instance = cls(**kwargs)
             session.add(instance)
-            session.commit()
-            session.refresh(instance)
+            if should_close:
+                session.commit()
+                session.refresh(instance)
             return instance
         finally:
-            session.close()
+            if should_close:
+                session.close()
     
     @classmethod
-    def get_by_id(cls, id: str):
+    def get_by_id(cls, id: str, session=None):
         """根据ID获取实例"""
-        from app.core.database import get_session
-        session = get_session()
+        if session is None:
+            from app.core.database import get_session
+            session = get_session()
+            should_close = True
+        else:
+            should_close = False
+            
         try:
             return session.query(cls).filter(
                 cls.id == id,
                 cls.is_deleted == False
             ).first()
         finally:
-            session.close()
+            if should_close:
+                session.close()
     
     @classmethod
-    def get_all(cls, include_deleted: bool = False):
+    def get_all(cls, include_deleted: bool = False, session=None):
         """获取所有实例"""
-        from app.core.database import get_session
-        session = get_session()
+        if session is None:
+            from app.core.database import get_session
+            session = get_session()
+            should_close = True
+        else:
+            should_close = False
+            
         try:
             query = session.query(cls)
             if not include_deleted:
                 query = query.filter(cls.is_deleted == False)
             return query.all()
         finally:
-            session.close()
+            if should_close:
+                session.close()
     
     @classmethod
-    def filter_by(cls, include_deleted: bool = False, **kwargs):
+    def filter_by(cls, include_deleted: bool = False, session=None, **kwargs):
         """根据条件筛选"""
         try:
-            from app.core.database import get_session
-            session = get_session()
+            if session is None:
+                from app.core.database import get_session
+                session = get_session()
+                
             query = session.query(cls).filter_by(**kwargs)
             if not include_deleted:
                 query = query.filter(cls.is_deleted == False)
@@ -188,36 +209,49 @@ class BaseModel(Base):
                     return 0
             return EmptyQuery()
     
-    def save(self):
+    def save(self, session=None):
         """保存实例"""
-        from app.core.database import get_session
-        session = get_session()
+        if session is None:
+            from app.core.database import get_session
+            session = get_session()
+            should_close = True
+        else:
+            should_close = False
+            
         try:
             # 检查对象是否已经在会话中
             if self in session:
-                session.commit()
-                session.refresh(self)
+                if should_close:
+                    session.commit()
+                    session.refresh(self)
             else:
                 # 如果对象已经在其他会话中，先合并
                 merged_obj = session.merge(self)
-                session.commit()
-                session.refresh(merged_obj)
-                # 更新当前对象的属性
-                for key, value in merged_obj.__dict__.items():
-                    if not key.startswith('_'):
-                        setattr(self, key, value)
+                if should_close:
+                    session.commit()
+                    session.refresh(merged_obj)
+                    # 更新当前对象的属性
+                    for key, value in merged_obj.__dict__.items():
+                        if not key.startswith('_'):
+                            setattr(self, key, value)
             return self
         finally:
-            session.close()
+            if should_close:
+                session.close()
     
-    def delete(self, soft: bool = True):
+    def delete(self, soft: bool = True, session=None):
         """删除实例"""
         if soft:
             self.soft_delete()
-            self.save()
+            self.save(session=session)
         else:
-            from app.core.database import get_session
-            session = get_session()
+            if session is None:
+                from app.core.database import get_session
+                session = get_session()
+                should_close = True
+            else:
+                should_close = False
+                
             try:
                 # 如果对象已经在其他会话中，先合并再删除
                 if self not in session:
@@ -225,9 +259,11 @@ class BaseModel(Base):
                     session.delete(merged_obj)
                 else:
                     session.delete(self)
-                session.commit()
+                if should_close:
+                    session.commit()
             finally:
-                session.close()
+                if should_close:
+                    session.close()
     
     def __repr__(self):
         return f"<{self.__class__.__name__}(id={self.id})>"
@@ -238,21 +274,27 @@ class BaseModel(Base):
 
 def init_database(database_url: str, **engine_options):
     """初始化数据库连接（向后兼容）"""
-    from app.core.database import init_database as core_init_database
-    return core_init_database(database_url, **engine_options)
+    # 延迟导入避免循环依赖
+    import importlib
+    database_module = importlib.import_module('app.core.database')
+    return database_module.init_database(database_url, **engine_options)
 
 
 def create_tables():
     """创建所有表（向后兼容）"""
-    from app.core.database import create_tables as core_create_tables
-    return core_create_tables()
+    # 延迟导入避免循环依赖
+    import importlib
+    database_module = importlib.import_module('app.core.database')
+    return database_module.create_tables()
 
 
 def drop_tables():
     """删除所有表"""
-    from app.core.database import get_engine
     try:
-        engine = get_engine()
+        # 延迟导入避免循环依赖
+        import importlib
+        database_module = importlib.import_module('app.core.database')
+        engine = database_module.get_engine()
         Base.metadata.drop_all(bind=engine)
         logger.info("数据库表删除成功")
     except Exception as e:
@@ -262,8 +304,10 @@ def drop_tables():
 
 def get_session() -> Session:
     """获取数据库会话（向后兼容）"""
-    from app.core.database import get_session as core_get_session
-    return core_get_session()
+    # 延迟导入避免循环依赖
+    import importlib
+    database_module = importlib.import_module('app.core.database')
+    return database_module.get_session()
 
 
 def close_session():

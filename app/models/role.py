@@ -99,69 +99,91 @@ class Role(BaseModel):
         self.is_active = False
         logger.info(f"角色 {self.name} 已停用")
     
-    def add_permission(self, permission):
+    def add_permission(self, permission, session=None):
         """添加权限"""
-        from app.models.permission import Permission
-        from app.models.associations import RolePermission
+        # 延迟导入避免循环依赖
+        import importlib
+        permission_module = importlib.import_module('app.models.permission')
+        associations_module = importlib.import_module('app.models.associations')
+        
+        Permission = permission_module.Permission
+        RolePermission = associations_module.RolePermission
         
         if not isinstance(permission, Permission):
             raise ValidationError("权限对象类型错误")
         
         # 检查权限是否已存在
-        existing = RolePermission.get_by_role_and_permission(self.id, permission.id)
+        existing = RolePermission.get_by_role_and_permission(self.id, permission.id, session=session)
         if existing:
             logger.warning(f"角色 {self.name} 已拥有权限 {permission.name}")
             return False
         
         # 创建角色权限关联
-        role_permission = RolePermission.grant_permission_to_role(self.id, permission.id)
+        role_permission = RolePermission.grant_permission_to_role(self.id, permission.id, session=session)
         
         logger.info(f"为角色 {self.name} 添加权限 {permission.name}")
         return True
     
-    def remove_permission(self, permission):
+    def remove_permission(self, permission, session=None):
         """移除权限"""
-        from app.models.permission import Permission
-        from app.models.associations import RolePermission
+        # 延迟导入避免循环依赖
+        import importlib
+        permission_module = importlib.import_module('app.models.permission')
+        associations_module = importlib.import_module('app.models.associations')
+        
+        Permission = permission_module.Permission
+        RolePermission = associations_module.RolePermission
         
         if not isinstance(permission, Permission):
             raise ValidationError("权限对象类型错误")
         
         # 查找角色权限关联
-        role_permission = RolePermission.get_by_role_and_permission(self.id, permission.id)
+        role_permission = RolePermission.get_by_role_and_permission(self.id, permission.id, session=session)
         if not role_permission:
             logger.warning(f"角色 {self.name} 不拥有权限 {permission.name}")
             return False
         
         # 删除关联
-        role_permission.delete(soft=False)
+        role_permission.delete(soft=False, session=session)
         
         logger.info(f"从角色 {self.name} 移除权限 {permission.name}")
         return True
     
-    def has_permission(self, permission_name: str) -> bool:
+    def has_permission(self, permission_name: str, session=None) -> bool:
         """检查是否拥有指定权限"""
-        from app.models.associations import RolePermission
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        RolePermission = associations_module.RolePermission
         
-        return RolePermission.role_has_permission(self.id, permission_name)
+        return RolePermission.role_has_permission(self.id, permission_name, session=session)
     
-    def get_permissions(self) -> List['Permission']:
+    def get_permissions(self, session=None) -> List['Permission']:
         """获取角色的所有权限"""
-        from app.models.associations import RolePermission
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        RolePermission = associations_module.RolePermission
         
-        return RolePermission.get_permissions_by_role(self.id)
+        return RolePermission.get_permissions_by_role(self.id, session=session)
     
-    def get_users(self) -> List['User']:
+    def get_users(self, session=None) -> List['User']:
         """获取拥有此角色的所有用户"""
-        from app.models.associations import UserRole
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        UserRole = associations_module.UserRole
         
-        return UserRole.get_users_by_role(self.id)
+        return UserRole.get_users_by_role(self.id, session=session)
     
-    def get_user_count(self) -> int:
+    def get_user_count(self, session=None) -> int:
         """获取拥有此角色的用户数量"""
-        from app.models.associations import UserRole
+        # 延迟导入避免循环依赖
+        import importlib
+        associations_module = importlib.import_module('app.models.associations')
+        UserRole = associations_module.UserRole
         
-        return UserRole.count_users_by_role(self.id)
+        return UserRole.count_users_by_role(self.id, session=session)
     
     def can_be_deleted(self) -> bool:
         """检查角色是否可以被删除"""

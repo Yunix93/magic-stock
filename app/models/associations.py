@@ -110,13 +110,21 @@ class UserRole(BaseModel):
         return cls.filter_by(user_id=user_id, role_id=role_id).first()
     
     @classmethod
-    def get_roles_by_user(cls, user_id: str) -> List['Role']:
+    def get_roles_by_user(cls, user_id: str, session=None) -> List['Role']:
         """获取用户的所有角色"""
         try:
-            from app.models.role import Role
-            from app.core.database import get_session
+            # 延迟导入避免循环依赖
+            import importlib
+            role_module = importlib.import_module('app.models.role')
+            Role = role_module.Role
             
-            session = get_session()
+            if session is None:
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
+            
             try:
                 roles = session.query(Role).join(
                     cls, Role.id == cls.role_id
@@ -128,18 +136,27 @@ class UserRole(BaseModel):
                 
                 return roles
             finally:
-                session.close()
+                if should_close:
+                    session.close()
         except Exception as e:
             return []
     
     @classmethod
-    def get_users_by_role(cls, role_id: str) -> List['User']:
+    def get_users_by_role(cls, role_id: str, session=None) -> List['User']:
         """获取拥有指定角色的所有用户"""
         try:
-            from app.models.user import User
-            from app.core.database import get_session
+            # 延迟导入避免循环依赖
+            import importlib
+            user_module = importlib.import_module('app.models.user')
+            User = user_module.User
             
-            session = get_session()
+            if session is None:
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
+            
             try:
                 users = session.query(User).join(
                 cls, User.id == cls.user_id
@@ -156,12 +173,18 @@ class UserRole(BaseModel):
             return []
     
     @classmethod
-    def count_users_by_role(cls, role_id: str) -> int:
+    def count_users_by_role(cls, role_id: str, session=None) -> int:
         """统计拥有指定角色的用户数量"""
         try:
-            from app.core.database import get_session
+            if session is None:
+                # 延迟导入避免循环依赖
+                import importlib
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
             
-            session = get_session()
             try:
                 count = session.query(cls).filter(
                     cls.role_id == role_id,
@@ -170,18 +193,27 @@ class UserRole(BaseModel):
                 
                 return count
             finally:
-                session.close()
+                if should_close:
+                    session.close()
         except Exception as e:
             return 0
     
     @classmethod
-    def user_has_role(cls, user_id: str, role_name: str) -> bool:
+    def user_has_role(cls, user_id: str, role_name: str, session=None) -> bool:
         """检查用户是否拥有指定角色"""
         try:
-            from app.models.role import Role
-            from app.core.database import get_session
+            # 延迟导入避免循环依赖
+            import importlib
+            role_module = importlib.import_module('app.models.role')
+            Role = role_module.Role
             
-            session = get_session()
+            if session is None:
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
+            
             try:
                 exists = session.query(cls).join(
                     Role, Role.id == cls.role_id
@@ -194,7 +226,8 @@ class UserRole(BaseModel):
                 
                 return exists is not None
             finally:
-                session.close()
+                if should_close:
+                    session.close()
         except Exception as e:
             return False
     
@@ -290,18 +323,33 @@ class RolePermission(BaseModel):
         return True
     
     @classmethod
-    def get_by_role_and_permission(cls, role_id: str, permission_id: str) -> Optional['RolePermission']:
+    def get_by_role_and_permission(cls, role_id: str, permission_id: str, session=None) -> Optional['RolePermission']:
         """根据角色ID和权限ID获取关联"""
-        return cls.filter_by(role_id=role_id, permission_id=permission_id).first()
+        if session is None:
+            return cls.filter_by(role_id=role_id, permission_id=permission_id).first()
+        else:
+            return session.query(cls).filter(
+                cls.role_id == role_id,
+                cls.permission_id == permission_id,
+                cls.is_deleted == False
+            ).first()
     
     @classmethod
-    def get_permissions_by_role(cls, role_id: str) -> List['Permission']:
+    def get_permissions_by_role(cls, role_id: str, session=None) -> List['Permission']:
         """获取角色的所有权限"""
         try:
-            from app.models.permission import Permission
-            from app.core.database import get_session
+            # 延迟导入避免循环依赖
+            import importlib
+            permission_module = importlib.import_module('app.models.permission')
+            Permission = permission_module.Permission
             
-            session = get_session()
+            if session is None:
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
+            
             try:
                 permissions = session.query(Permission).join(
                     cls, Permission.id == cls.permission_id
@@ -313,40 +361,56 @@ class RolePermission(BaseModel):
                 
                 return permissions
             finally:
-                session.close()
+                if should_close:
+                    session.close()
         except Exception as e:
             return []
     
     @classmethod
-    def get_roles_by_permission(cls, permission_id: str) -> List['Role']:
+    def get_roles_by_permission(cls, permission_id: str, session=None) -> List['Role']:
         """获取拥有指定权限的所有角色"""
         try:
-            from app.models.role import Role
-            from app.core.database import get_session
+            # 延迟导入避免循环依赖
+            import importlib
+            role_module = importlib.import_module('app.models.role')
+            Role = role_module.Role
             
-            session = get_session()
+            if session is None:
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
+            
             try:
                 roles = session.query(Role).join(
-                cls, Role.id == cls.role_id
-            ).filter(
-                cls.permission_id == permission_id,
-                cls.is_deleted == False,
-                Role.is_deleted == False
-            ).all()
+                    cls, Role.id == cls.role_id
+                ).filter(
+                    cls.permission_id == permission_id,
+                    cls.is_deleted == False,
+                    Role.is_deleted == False
+                ).all()
                 
                 return roles
             finally:
-                session.close()
+                if should_close:
+                    session.close()
         except Exception as e:
             return []
     
     @classmethod
-    def count_roles_by_permission(cls, permission_id: str) -> int:
+    def count_roles_by_permission(cls, permission_id: str, session=None) -> int:
         """统计拥有指定权限的角色数量"""
         try:
-            from app.core.database import get_session
+            if session is None:
+                # 延迟导入避免循环依赖
+                import importlib
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
             
-            session = get_session()
             try:
                 count = session.query(cls).filter(
                     cls.permission_id == permission_id,
@@ -355,18 +419,27 @@ class RolePermission(BaseModel):
                 
                 return count
             finally:
-                session.close()
+                if should_close:
+                    session.close()
         except Exception as e:
             return 0
     
     @classmethod
-    def role_has_permission(cls, role_id: str, permission_name: str) -> bool:
+    def role_has_permission(cls, role_id: str, permission_name: str, session=None) -> bool:
         """检查角色是否拥有指定权限"""
         try:
-            from app.models.permission import Permission
-            from app.core.database import get_session
+            # 延迟导入避免循环依赖
+            import importlib
+            permission_module = importlib.import_module('app.models.permission')
+            Permission = permission_module.Permission
             
-            session = get_session()
+            if session is None:
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
+            
             try:
                 exists = session.query(cls).join(
                     Permission, Permission.id == cls.permission_id
@@ -379,18 +452,27 @@ class RolePermission(BaseModel):
                 
                 return exists is not None
             finally:
-                session.close()
+                if should_close:
+                    session.close()
         except Exception as e:
             return False
     
     @classmethod
-    def user_has_permission(cls, user_id: str, permission_name: str) -> bool:
+    def user_has_permission(cls, user_id: str, permission_name: str, session=None) -> bool:
         """检查用户是否通过角色拥有指定权限"""
         try:
-            from app.models.permission import Permission
-            from app.core.database import get_session
+            # 延迟导入避免循环依赖
+            import importlib
+            permission_module = importlib.import_module('app.models.permission')
+            Permission = permission_module.Permission
             
-            session = get_session()
+            if session is None:
+                database_module = importlib.import_module('app.core.database')
+                session = database_module.get_session()
+                should_close = True
+            else:
+                should_close = False
+            
             try:
                 # 通过用户角色关联和角色权限关联查询
                 exists = session.query(cls).join(
@@ -407,7 +489,8 @@ class RolePermission(BaseModel):
                 
                 return exists is not None
             finally:
-                session.close()
+                if should_close:
+                    session.close()
         except Exception as e:
             return False
     

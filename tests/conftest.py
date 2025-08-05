@@ -34,8 +34,23 @@ def app():
         
         # 清理
         drop_tables()
-        os.close(db_fd)
-        os.unlink(db_path)
+        
+        # 安全地清理临时文件
+        try:
+            os.close(db_fd)
+        except:
+            pass
+        
+        try:
+            os.unlink(db_path)
+        except PermissionError:
+            # Windows下可能出现权限问题，延迟删除
+            import time
+            time.sleep(0.1)
+            try:
+                os.unlink(db_path)
+            except:
+                pass  # 如果还是无法删除，就忽略
 
 
 @pytest.fixture(scope="function")
@@ -94,3 +109,12 @@ def create_test_user(db_session):
         return user
     
     return _create_user
+
+
+@pytest.fixture(params=[
+    'postgresql://user:password@localhost/testdb',
+    'mysql://user:password@localhost/testdb'
+])
+def database_url(request):
+    """提供不同数据库URL用于测试"""
+    return request.param
