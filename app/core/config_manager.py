@@ -125,7 +125,43 @@ class ConfigManager:
             'PASSWORD_REQUIRE_LOWERCASE': os.getenv('PASSWORD_REQUIRE_LOWERCASE', 'true').lower() == 'true',
             'PASSWORD_REQUIRE_NUMBERS': os.getenv('PASSWORD_REQUIRE_NUMBERS', 'true').lower() == 'true',
             'PASSWORD_REQUIRE_SYMBOLS': os.getenv('PASSWORD_REQUIRE_SYMBOLS', 'false').lower() == 'true',
+            'ENABLE_CORS': os.getenv('ENABLE_CORS', 'false').lower() == 'true',
         }
+    
+    def get_app_config(self) -> Dict[str, Any]:
+        """获取应用配置"""
+        return {
+            'APP_TITLE': os.getenv('APP_TITLE', '现代化后台管理系统'),
+            'APP_VERSION': os.getenv('APP_VERSION', '1.0.0'),
+            'APP_DESCRIPTION': os.getenv('APP_DESCRIPTION', '基于Dash的现代化后台管理系统'),
+            'COMPANY_NAME': os.getenv('COMPANY_NAME', 'Admin System Team'),
+            'SUPPORT_EMAIL': os.getenv('SUPPORT_EMAIL', 'support@example.com'),
+            'ENABLE_REGISTRATION': os.getenv('ENABLE_REGISTRATION', 'true').lower() == 'true',
+            'DEFAULT_LANGUAGE': os.getenv('DEFAULT_LANGUAGE', 'zh-CN'),
+            'TIMEZONE': os.getenv('TIMEZONE', 'Asia/Shanghai'),
+        }
+    
+    def get_cache_config(self) -> Dict[str, Any]:
+        """获取缓存配置"""
+        cache_type = os.getenv('CACHE_TYPE', 'simple')
+        
+        config = {
+            'CACHE_TYPE': cache_type,
+            'CACHE_DEFAULT_TIMEOUT': int(os.getenv('CACHE_DEFAULT_TIMEOUT', '300')),
+        }
+        
+        if cache_type == 'redis':
+            config.update({
+                'CACHE_REDIS_URL': self.get_redis_config(),
+                'CACHE_KEY_PREFIX': os.getenv('CACHE_KEY_PREFIX', 'admin_system:'),
+            })
+        elif cache_type == 'filesystem':
+            config.update({
+                'CACHE_DIR': os.getenv('CACHE_DIR', 'cache'),
+                'CACHE_THRESHOLD': int(os.getenv('CACHE_THRESHOLD', '500')),
+            })
+        
+        return config
 
 
 # 全局配置管理器实例
