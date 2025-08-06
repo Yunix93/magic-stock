@@ -31,8 +31,16 @@ class LayoutManager:
         Returns:
             html.Div: 主布局组件
         """
-        self.current_user = user_session.get('user') if user_session else None
+        # 直接使用user_session作为用户数据，因为认证回调中用户信息直接存储在session中
+        self.current_user = user_session if user_session and user_session.get('user_id') else None
         self.user_permissions = user_session.get('permissions', []) if user_session else []
+        
+        # 调试信息
+        if user_session:
+            logger.info(f"布局组件接收到用户会话: user_id={user_session.get('user_id')}, username={user_session.get('username')}")
+            logger.info(f"用户权限: {self.user_permissions}")
+        else:
+            logger.info("布局组件未接收到用户会话数据")
         
         return html.Div([
             # 顶部导航栏
@@ -120,12 +128,12 @@ class LayoutManager:
                 html.Div([
                     html.Div([
                         html.Img(
-                            src=self.current_user.get('avatar_url', '/assets/imgs/default-avatar.png'),
+                            src='/assets/imgs/default-avatar.svg',  # 使用默认头像
                             className='user-avatar-small'
                         ),
                         html.Div([
-                            html.Div(self.current_user.get('full_name', '用户'), className='user-name'),
-                            html.Div(self.current_user.get('role_name', '普通用户'), className='user-role')
+                            html.Div(self.current_user.get('full_name') or self.current_user.get('username', '用户'), className='user-name'),
+                            html.Div('超级管理员' if self.current_user.get('is_superuser') else '普通用户', className='user-role')
                         ], className='user-info')
                     ], className='sidebar-user')
                 ], className='sidebar-header'),
@@ -145,10 +153,10 @@ class LayoutManager:
         return html.Div([
             html.Button([
                 html.Img(
-                    src=self.current_user.get('avatar_url', '/assets/imgs/default-avatar.png'),
+                    src='/assets/imgs/default-avatar.svg',  # 使用默认头像
                     className='user-avatar'
                 ),
-                html.Span(self.current_user.get('full_name', '用户'), className='user-name'),
+                html.Span(self.current_user.get('full_name') or self.current_user.get('username', '用户'), className='user-name'),
                 html.I(className='dropdown-arrow')
             ], className='user-dropdown-btn', id='user-dropdown-btn'),
             
