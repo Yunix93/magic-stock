@@ -140,62 +140,8 @@ class LoginLog(BaseModel):
         
         return result
     
-    @classmethod
-    def create_login_log(cls, user_id: str = None, ip_address: str = None, 
-                        user_agent: str = None, status: str = 'failed') -> 'LoginLog':
-        """创建登录日志"""
-        log = cls(
-            user_id=user_id,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            status=status
-        )
-        
-        log.save()
-        
-        log_type = "成功" if status == 'success' else "失败"
-        logger.info(f"创建登录日志: 用户 {user_id} 登录{log_type}")
-        return log
-    
-    @classmethod
-    def get_by_user(cls, user_id: str, limit: int = 50) -> List['LoginLog']:
-        """获取用户的登录日志"""
-        return cls.filter_by(user_id=user_id).order_by(
-            cls.login_time.desc()
-        ).limit(limit).all()
-    
-    @classmethod
-    def get_recent_logs(cls, hours: int = 24, limit: int = 100) -> List['LoginLog']:
-        """获取最近的登录日志"""
-        from datetime import timedelta
-        
-        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
-        
-        return cls.filter_by().filter(
-            cls.login_time >= cutoff_time
-        ).order_by(
-            cls.login_time.desc()
-        ).limit(limit).all()
-    
-    @classmethod
-    def get_failed_attempts(cls, user_id: str = None, ip_address: str = None, 
-                           hours: int = 1) -> List['LoginLog']:
-        """获取失败的登录尝试"""
-        from datetime import timedelta
-        
-        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
-        
-        query = cls.filter_by(status='failed').filter(
-            cls.login_time >= cutoff_time
-        )
-        
-        if user_id:
-            query = query.filter(cls.user_id == user_id)
-        
-        if ip_address:
-            query = query.filter(cls.ip_address == ip_address)
-        
-        return query.order_by(cls.login_time.desc()).all()
+    # 日志创建和查询逻辑已移至 LogService
+    # 模型层只保留数据访问和基本验证方法
     
     def __repr__(self):
         return f"<LoginLog(user_id={self.user_id}, status={self.status}, time={self.login_time})>"
@@ -298,77 +244,8 @@ class OperationLog(BaseModel):
         
         return result
     
-    @classmethod
-    def create_operation_log(cls, user_id: str = None, operation: str = None, 
-                           resource: str = None, details: Dict[str, Any] = None,
-                           ip_address: str = None) -> 'OperationLog':
-        """创建操作日志"""
-        if not operation:
-            raise ValidationError("操作类型不能为空")
-        
-        if not resource:
-            raise ValidationError("操作资源不能为空")
-        
-        log = cls(
-            user_id=user_id,
-            operation=operation,
-            resource=resource,
-            details=details,
-            ip_address=ip_address
-        )
-        
-        log.save()
-        
-        logger.info(f"创建操作日志: 用户 {user_id} {operation} {resource}")
-        return log
-    
-    @classmethod
-    def get_by_user(cls, user_id: str, limit: int = 50) -> List['OperationLog']:
-        """获取用户的操作日志"""
-        return cls.filter_by(user_id=user_id).order_by(
-            cls.created_at.desc()
-        ).limit(limit).all()
-    
-    @classmethod
-    def get_by_resource(cls, resource: str, limit: int = 50) -> List['OperationLog']:
-        """获取资源的操作日志"""
-        return cls.filter_by(resource=resource).order_by(
-            cls.created_at.desc()
-        ).limit(limit).all()
-    
-    @classmethod
-    def get_by_operation(cls, operation: str, limit: int = 50) -> List['OperationLog']:
-        """获取指定操作类型的日志"""
-        return cls.filter_by(operation=operation).order_by(
-            cls.created_at.desc()
-        ).limit(limit).all()
-    
-    @classmethod
-    def get_recent_logs(cls, hours: int = 24, limit: int = 100) -> List['OperationLog']:
-        """获取最近的操作日志"""
-        from datetime import timedelta
-        
-        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
-        
-        return cls.filter_by().filter(
-            cls.created_at >= cutoff_time
-        ).order_by(
-            cls.created_at.desc()
-        ).limit(limit).all()
-    
-    @classmethod
-    def search_logs(cls, query: str, limit: int = 50) -> List['OperationLog']:
-        """搜索操作日志"""
-        from sqlalchemy import or_
-        
-        search_filter = or_(
-            cls.operation.ilike(f'%{query}%'),
-            cls.resource.ilike(f'%{query}%')
-        )
-        
-        return cls.filter_by().filter(search_filter).order_by(
-            cls.created_at.desc()
-        ).limit(limit).all()
+    # 日志创建和查询逻辑已移至 LogService
+    # 模型层只保留数据访问和基本验证方法
     
     def __repr__(self):
         return f"<OperationLog(user_id={self.user_id}, operation={self.operation}, resource={self.resource})>"

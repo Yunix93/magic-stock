@@ -24,9 +24,7 @@ def reset_database():
         return False
     
     try:
-        # 加载环境变量
-        from app.core.extensions import load_environment_variables
-        load_environment_variables()
+        # 环境变量已在config_manager中自动加载
         
         # 创建应用实例
         from app import create_app
@@ -40,7 +38,8 @@ def reset_database():
             
             # 确保所有模型都被导入
             from app.models.user import User
-            from app.models.role import Role, Permission
+            from app.models.role import Role
+            from app.models.permission import Permission
             from app.models.logs import LoginLog, OperationLog
             
             # 初始化数据库连接

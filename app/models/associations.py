@@ -23,34 +23,11 @@ class UserRole(BaseModel):
     __tablename__ = DatabaseTables.USER_ROLES
     
     # 外键字段
-    user_id = Column(
-        String(36),
-        ForeignKey('users.id', ondelete='CASCADE'),
-        nullable=False,
-        comment="用户ID"
-    )
-    
-    role_id = Column(
-        String(36),
-        ForeignKey('roles.id', ondelete='CASCADE'),
-        nullable=False,
-        comment="角色ID"
-    )
-    
+    user_id = Column( String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment="用户ID")
+    role_id = Column( String(36), ForeignKey('roles.id', ondelete='CASCADE'), nullable=False, comment="角色ID")
     # 分配信息
-    assigned_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="分配时间"
-    )
-    
-    assigned_by = Column(
-        String(36),
-        ForeignKey('users.id', ondelete='SET NULL'),
-        nullable=True,
-        comment="分配者ID"
-    )
+    assigned_at = Column( DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, comment="分配时间")
+    assigned_by = Column( String(36), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, comment="分配者ID")
     
     # 关系定义
     # user = relationship("User", foreign_keys=[user_id])
@@ -70,132 +47,14 @@ class UserRole(BaseModel):
         kwargs.setdefault('assigned_at', datetime.now(timezone.utc))
         super().__init__(**kwargs)
     
-    @classmethod
-    def assign_role_to_user(cls, user_id: str, role_id: str, assigned_by: str = None) -> 'UserRole':
-        """为用户分配角色"""
-        # 检查是否已存在
-        existing = cls.get_by_user_and_role(user_id, role_id)
-        if existing:
-            logger.warning(f"用户 {user_id} 已拥有角色 {role_id}")
-            return existing
-        
-        # 创建新的关联
-        user_role = cls(
-            user_id=user_id,
-            role_id=role_id,
-            assigned_by=assigned_by
-        )
-        
-        user_role.save()
-        
-        logger.info(f"为用户 {user_id} 分配角色 {role_id}")
-        return user_role
+    # 用户角色分配和移除逻辑已移至 UserService
+    # 关联表模型只保留数据访问方法
     
-    @classmethod
-    def remove_role_from_user(cls, user_id: str, role_id: str) -> bool:
-        """从用户移除角色"""
-        user_role = cls.get_by_user_and_role(user_id, role_id)
-        if not user_role:
-            logger.warning(f"用户 {user_id} 不拥有角色 {role_id}")
-            return False
-        
-        user_role.delete(soft=False)
-        
-        logger.info(f"从用户 {user_id} 移除角色 {role_id}")
-        return True
-    
+    # 查询方法保留在模型层，但复杂业务逻辑移至服务层
     @classmethod
     def get_by_user_and_role(cls, user_id: str, role_id: str) -> Optional['UserRole']:
         """根据用户ID和角色ID获取关联"""
         return cls.filter_by(user_id=user_id, role_id=role_id).first()
-    
-    @classmethod
-    def get_roles_by_user(cls, user_id: str, session=None) -> List['Role']:
-        """获取用户的所有角色"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            role_module = importlib.import_module('app.models.role')
-            database_module = importlib.import_module('app.core.database')
-            Role = role_module.Role
-            
-            with database_module.get_db_session(session) as db_session:
-                roles = db_session.query(Role).join(
-                    cls, Role.id == cls.role_id
-                ).filter(
-                    cls.user_id == user_id,
-                    cls.is_deleted == False,
-                    Role.is_deleted == False
-                ).all()
-                
-                return roles
-        except Exception as e:
-            return []
-    
-    @classmethod
-    def get_users_by_role(cls, role_id: str, session=None) -> List['User']:
-        """获取拥有指定角色的所有用户"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            user_module = importlib.import_module('app.models.user')
-            database_module = importlib.import_module('app.core.database')
-            User = user_module.User
-            
-            with database_module.get_db_session(session) as db_session:
-                users = db_session.query(User).join(
-                    cls, User.id == cls.user_id
-                ).filter(
-                    cls.role_id == role_id,
-                    cls.is_deleted == False,
-                    User.is_deleted == False
-                ).all()
-                
-                return users
-        except Exception as e:
-            return []
-    
-    @classmethod
-    def count_users_by_role(cls, role_id: str, session=None) -> int:
-        """统计拥有指定角色的用户数量"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            database_module = importlib.import_module('app.core.database')
-            
-            with database_module.get_db_session(session) as db_session:
-                count = db_session.query(cls).filter(
-                    cls.role_id == role_id,
-                    cls.is_deleted == False
-                ).count()
-                
-                return count
-        except Exception as e:
-            return 0
-    
-    @classmethod
-    def user_has_role(cls, user_id: str, role_name: str, session=None) -> bool:
-        """检查用户是否拥有指定角色"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            role_module = importlib.import_module('app.models.role')
-            database_module = importlib.import_module('app.core.database')
-            Role = role_module.Role
-            
-            with database_module.get_db_session(session) as db_session:
-                exists = db_session.query(cls).join(
-                    Role, Role.id == cls.role_id
-                ).filter(
-                    cls.user_id == user_id,
-                    Role.name == role_name,
-                    cls.is_deleted == False,
-                    Role.is_deleted == False
-                ).first()
-                
-                return exists is not None
-        except Exception as e:
-            return False
     
     def __repr__(self):
         return f"<UserRole(user_id={self.user_id}, role_id={self.role_id})>"
@@ -207,34 +66,11 @@ class RolePermission(BaseModel):
     __tablename__ = DatabaseTables.ROLE_PERMISSIONS
     
     # 外键字段
-    role_id = Column(
-        String(36),
-        ForeignKey('roles.id', ondelete='CASCADE'),
-        nullable=False,
-        comment="角色ID"
-    )
-    
-    permission_id = Column(
-        String(36),
-        ForeignKey('permissions.id', ondelete='CASCADE'),
-        nullable=False,
-        comment="权限ID"
-    )
-    
+    role_id = Column( String(36), ForeignKey('roles.id', ondelete='CASCADE'), nullable=False, comment="角色ID")
+    permission_id = Column( String(36), ForeignKey('permissions.id', ondelete='CASCADE'), nullable=False, comment="权限ID")
     # 授权信息
-    granted_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="授权时间"
-    )
-    
-    granted_by = Column(
-        String(36),
-        ForeignKey('users.id', ondelete='SET NULL'),
-        nullable=True,
-        comment="授权者ID"
-    )
+    granted_at = Column( DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, comment="授权时间")
+    granted_by = Column( String(36), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, comment="授权者ID")
     
     # 关系定义
     # role = relationship("Role", foreign_keys=[role_id])
@@ -254,40 +90,10 @@ class RolePermission(BaseModel):
         kwargs.setdefault('granted_at', datetime.now(timezone.utc))
         super().__init__(**kwargs)
     
-    @classmethod
-    def grant_permission_to_role(cls, role_id: str, permission_id: str, granted_by: str = None) -> 'RolePermission':
-        """为角色授予权限"""
-        # 检查是否已存在
-        existing = cls.get_by_role_and_permission(role_id, permission_id)
-        if existing:
-            logger.warning(f"角色 {role_id} 已拥有权限 {permission_id}")
-            return existing
-        
-        # 创建新的关联
-        role_permission = cls(
-            role_id=role_id,
-            permission_id=permission_id,
-            granted_by=granted_by
-        )
-        
-        role_permission.save()
-        
-        logger.info(f"为角色 {role_id} 授予权限 {permission_id}")
-        return role_permission
+    # 角色权限授予和撤销逻辑已移至 RoleService
+    # 关联表模型只保留数据访问方法
     
-    @classmethod
-    def revoke_permission_from_role(cls, role_id: str, permission_id: str) -> bool:
-        """从角色撤销权限"""
-        role_permission = cls.get_by_role_and_permission(role_id, permission_id)
-        if not role_permission:
-            logger.warning(f"角色 {role_id} 不拥有权限 {permission_id}")
-            return False
-        
-        role_permission.delete(soft=False)
-        
-        logger.info(f"从角色 {role_id} 撤销权限 {permission_id}")
-        return True
-    
+    # 查询方法保留在模型层，但复杂业务逻辑移至服务层
     @classmethod
     def get_by_role_and_permission(cls, role_id: str, permission_id: str, session=None) -> Optional['RolePermission']:
         """根据角色ID和权限ID获取关联"""
@@ -302,122 +108,6 @@ class RolePermission(BaseModel):
                 ).first()
         except Exception as e:
             return None
-    
-    @classmethod
-    def get_permissions_by_role(cls, role_id: str, session=None) -> List['Permission']:
-        """获取角色的所有权限"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            permission_module = importlib.import_module('app.models.permission')
-            database_module = importlib.import_module('app.core.database')
-            Permission = permission_module.Permission
-            
-            with database_module.get_db_session(session) as db_session:
-                permissions = db_session.query(Permission).join(
-                    cls, Permission.id == cls.permission_id
-                ).filter(
-                    cls.role_id == role_id,
-                    cls.is_deleted == False,
-                    Permission.is_deleted == False
-                ).all()
-                
-                return permissions
-        except Exception as e:
-            return []
-    
-    @classmethod
-    def get_roles_by_permission(cls, permission_id: str, session=None) -> List['Role']:
-        """获取拥有指定权限的所有角色"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            role_module = importlib.import_module('app.models.role')
-            database_module = importlib.import_module('app.core.database')
-            Role = role_module.Role
-            
-            with database_module.get_db_session(session) as db_session:
-                roles = db_session.query(Role).join(
-                    cls, Role.id == cls.role_id
-                ).filter(
-                    cls.permission_id == permission_id,
-                    cls.is_deleted == False,
-                    Role.is_deleted == False
-                ).all()
-                
-                return roles
-        except Exception as e:
-            return []
-    
-    @classmethod
-    def count_roles_by_permission(cls, permission_id: str, session=None) -> int:
-        """统计拥有指定权限的角色数量"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            database_module = importlib.import_module('app.core.database')
-            
-            with database_module.get_db_session(session) as db_session:
-                count = db_session.query(cls).filter(
-                    cls.permission_id == permission_id,
-                    cls.is_deleted == False
-                ).count()
-                
-                return count
-        except Exception as e:
-            return 0
-    
-    @classmethod
-    def role_has_permission(cls, role_id: str, permission_name: str, session=None) -> bool:
-        """检查角色是否拥有指定权限"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            permission_module = importlib.import_module('app.models.permission')
-            database_module = importlib.import_module('app.core.database')
-            Permission = permission_module.Permission
-            
-            with database_module.get_db_session(session) as db_session:
-                exists = db_session.query(cls).join(
-                    Permission, Permission.id == cls.permission_id
-                ).filter(
-                    cls.role_id == role_id,
-                    Permission.name == permission_name,
-                    cls.is_deleted == False,
-                    Permission.is_deleted == False
-                ).first()
-                
-                return exists is not None
-        except Exception as e:
-            return False
-    
-    @classmethod
-    def user_has_permission(cls, user_id: str, permission_name: str, session=None) -> bool:
-        """检查用户是否通过角色拥有指定权限"""
-        try:
-            # 延迟导入避免循环依赖
-            import importlib
-            permission_module = importlib.import_module('app.models.permission')
-            database_module = importlib.import_module('app.core.database')
-            Permission = permission_module.Permission
-            
-            with database_module.get_db_session(session) as db_session:
-                # 通过用户角色关联和角色权限关联查询
-                exists = db_session.query(cls).join(
-                    Permission, Permission.id == cls.permission_id
-                ).join(
-                    UserRole, UserRole.role_id == cls.role_id
-                ).filter(
-                    UserRole.user_id == user_id,
-                    Permission.name == permission_name,
-                    cls.is_deleted == False,
-                    UserRole.is_deleted == False,
-                    Permission.is_deleted == False
-                ).first()
-                
-                return exists is not None
-        except Exception as e:
-            return False
     
     def __repr__(self):
         return f"<RolePermission(role_id={self.role_id}, permission_id={self.permission_id})>"

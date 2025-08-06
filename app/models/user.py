@@ -178,129 +178,22 @@ class User(BaseModel):
         
         super().__init__(**kwargs)
     
-    def set_password(self, password: str) -> str:
-        """设置密码"""
-        # 验证密码强度
-        password_validator.validate(password, '密码')
-        
-        # 生成密码哈希
-        password_hash = hash_password(password)
-        self.password_hash = password_hash
-        self.password_changed_at = datetime.now(timezone.utc)
-        
-        # 清除重置令牌
-        self.reset_token = None
-        self.reset_token_expires = None
-        
-        logger.info(f"用户 {self.username} 密码已更新")
-        return password_hash
-    
     def check_password(self, password: str) -> bool:
-        """验证密码"""
+        """验证密码 - 基本验证方法，保留在模型层"""
         if not self.password_hash:
             return False
         
         return verify_password(password, self.password_hash)
     
-    def authenticate(self, password: str) -> bool:
-        """用户认证"""
-        # 检查账户状态
-        if not self.is_active:
-            raise AuthenticationError("账户已被禁用")
-        
-        if self.is_locked():
-            raise AuthenticationError("账户已被锁定")
-        
-        # 验证密码
-        if not self.check_password(password):
-            self.increment_failed_attempts()
-            raise AuthenticationError("密码错误")
-        
-        # 认证成功，重置失败次数
-        self.reset_failed_attempts()
-        self.update_last_login()
-        
-        logger.info(f"用户 {self.username} 认证成功")
-        return True
-    
-    def update_last_login(self):
-        """更新最后登录时间"""
-        self.last_login = datetime.now(timezone.utc)
-    
-    def increment_failed_attempts(self):
-        """增加失败登录次数"""
-        try:
-            attempts = int(self.failed_login_attempts or "0")
-        except ValueError:
-            attempts = 0
-        
-        attempts += 1
-        self.failed_login_attempts = str(attempts)
-        
-        # 如果失败次数过多，锁定账户
-        max_attempts = 5  # 可以从配置中读取
-        if attempts >= max_attempts:
-            self.lock_account(minutes=30)  # 锁定30分钟
-        
-        logger.warning(f"用户 {self.username} 登录失败，失败次数: {attempts}")
-    
-    def reset_failed_attempts(self):
-        """重置失败登录次数"""
-        self.failed_login_attempts = "0"
-        self.locked_until = None
-    
-    def lock_account(self, minutes: int = 30):
-        """锁定账户"""
-        from datetime import timedelta
-        self.locked_until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
-        logger.warning(f"用户 {self.username} 账户已锁定 {minutes} 分钟")
-    
-    def unlock_account(self):
-        """解锁账户"""
-        self.locked_until = None
-        self.reset_failed_attempts()
-        logger.info(f"用户 {self.username} 账户已解锁")
-    
     def is_locked(self) -> bool:
-        """检查账户是否被锁定"""
+        """检查账户是否被锁定 - 基本状态检查，保留在模型层"""
         if not self.locked_until:
             return False
         
         return datetime.now(timezone.utc) < self.locked_until
     
-    def activate(self):
-        """激活用户"""
-        self.is_active = True
-        self.unlock_account()
-        logger.info(f"用户 {self.username} 已激活")
-    
-    def deactivate(self):
-        """停用用户"""
-        self.is_active = False
-        logger.info(f"用户 {self.username} 已停用")
-    
-    def verify_email(self):
-        """验证邮箱"""
-        self.is_verified = True
-        self.verification_token = None
-        logger.info(f"用户 {self.username} 邮箱已验证")
-    
-    def generate_verification_token(self) -> str:
-        """生成邮箱验证令牌"""
-        token = generate_secure_token()
-        self.verification_token = token
-        return token
-    
-    def generate_reset_token(self, expires_in: int = 3600) -> str:
-        """生成密码重置令牌"""
-        from datetime import timedelta
-        token = generate_secure_token()
-        self.reset_token = token
-        self.reset_token_expires = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
-        return token
-    
     def verify_reset_token(self, token: str) -> bool:
-        """验证重置令牌"""
+        """验证重置令牌 - 基本验证方法，保留在模型层"""
         if not self.reset_token or not self.reset_token_expires:
             return False
         
@@ -309,12 +202,15 @@ class User(BaseModel):
         
         return self.reset_token == token
     
+    # 复杂的业务逻辑方法已移至 UserService
+    # 包括：用户认证、密码管理、状态管理、角色管理等
+    
     def get_status(self) -> str:
-        """获取用户状态"""
+        """获取用户状态 - 基本状态计算，保留在模型层"""
         if not self.is_active:
             return UserStatus.INACTIVE.value
         elif self.is_locked():
-            return UserStatus.SUSPENDED.value
+            return UserStatus.LOCKED.value
         elif not self.is_verified:
             return UserStatus.PENDING.value
         else:
@@ -352,35 +248,9 @@ class User(BaseModel):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
     
-    @classmethod
-    def create_user(cls, username: str, email: str, password: str, **kwargs) -> 'User':
-        """创建新用户"""
-        # 验证用户名和邮箱唯一性
-        existing_user = cls.get_by_username(username)
-        if existing_user:
-            raise ValidationError("用户名已存在")
-        
-        existing_email = cls.get_by_email(email)
-        if existing_email:
-            raise ValidationError("邮箱已存在")
-        
-        # 创建用户实例
-        user = cls(
-            username=username,
-            email=email,
-            password=password,
-            **kwargs
-        )
-        
-        # 生成验证令牌
-        user.generate_verification_token()
-        
-        # 保存到数据库
-        user.save()
-        
-        logger.info(f"新用户创建成功: {username}")
-        return user
+    # 用户创建逻辑已移至 UserService.create_user()
     
+    # 查询方法保留在模型层，但复杂业务逻辑移至服务层
     @classmethod
     def get_by_username(cls, username: str) -> Optional['User']:
         """根据用户名获取用户"""
@@ -397,126 +267,8 @@ class User(BaseModel):
         except:
             return None
     
-    @classmethod
-    def get_active_users(cls) -> List['User']:
-        """获取所有活跃用户"""
-        return cls.filter_by(is_active=True).all()
-    
-    @classmethod
-    def search_users(cls, query: str, limit: int = 20) -> List['User']:
-        """搜索用户"""
-        from sqlalchemy import or_
-        
-        search_filter = or_(
-            cls.username.ilike(f'%{query}%'),
-            cls.email.ilike(f'%{query}%'),
-            cls.full_name.ilike(f'%{query}%')
-        )
-        
-        return cls.filter_by().filter(search_filter).limit(limit).all()
-    
-    def add_role(self, role, assigned_by: str = None, session=None) -> bool:
-        """为用户添加角色"""
-        # 延迟导入避免循环依赖
-        import importlib
-        role_module = importlib.import_module('app.models.role')
-        associations_module = importlib.import_module('app.models.associations')
-        
-        Role = role_module.Role
-        UserRole = associations_module.UserRole
-        
-        if isinstance(role, str):
-            # 如果传入的是角色名称，查找角色对象
-            role_obj = Role.get_by_name(role, session=session)
-            if not role_obj:
-                raise ValidationError(f"角色 {role} 不存在")
-            role = role_obj
-        
-        if not isinstance(role, Role):
-            raise ValidationError("角色对象类型错误")
-        
-        # 创建用户角色关联
-        user_role = UserRole.assign_role_to_user(self.id, role.id, assigned_by, session=session)
-        return user_role is not None
-    
-    def remove_role(self, role, session=None) -> bool:
-        """从用户移除角色"""
-        # 延迟导入避免循环依赖
-        import importlib
-        role_module = importlib.import_module('app.models.role')
-        associations_module = importlib.import_module('app.models.associations')
-        
-        Role = role_module.Role
-        UserRole = associations_module.UserRole
-        
-        if isinstance(role, str):
-            # 如果传入的是角色名称，查找角色对象
-            role_obj = Role.get_by_name(role, session=session)
-            if not role_obj:
-                raise ValidationError(f"角色 {role} 不存在")
-            role = role_obj
-        
-        if not isinstance(role, Role):
-            raise ValidationError("角色对象类型错误")
-        
-        return UserRole.remove_role_from_user(self.id, role.id, session=session)
-    
-    def has_role(self, role_name: str, session=None) -> bool:
-        """检查用户是否拥有指定角色"""
-        # 延迟导入避免循环依赖
-        import importlib
-        associations_module = importlib.import_module('app.models.associations')
-        UserRole = associations_module.UserRole
-        
-        return UserRole.user_has_role(self.id, role_name, session=session)
-    
-    def has_permission(self, permission_name: str, session=None) -> bool:
-        """检查用户是否拥有指定权限"""
-        # 延迟导入避免循环依赖
-        import importlib
-        associations_module = importlib.import_module('app.models.associations')
-        RolePermission = associations_module.RolePermission
-        
-        return RolePermission.user_has_permission(self.id, permission_name, session=session)
-    
-    def get_roles(self, session=None) -> List['Role']:
-        """获取用户的所有角色"""
-        # 延迟导入避免循环依赖
-        import importlib
-        associations_module = importlib.import_module('app.models.associations')
-        UserRole = associations_module.UserRole
-        
-        return UserRole.get_roles_by_user(self.id, session=session)
-    
-    def get_permissions(self, session=None) -> List['Permission']:
-        """获取用户通过角色拥有的所有权限"""
-        # 延迟导入避免循环依赖
-        import importlib
-        associations_module = importlib.import_module('app.models.associations')
-        RolePermission = associations_module.RolePermission
-        
-        # 获取用户的所有角色
-        roles = self.get_roles(session=session)
-        
-        # 获取这些角色的所有权限
-        permissions = []
-        for role in roles:
-            role_permissions = RolePermission.get_permissions_by_role(role.id, session=session)
-            permissions.extend(role_permissions)
-        
-        # 去重
-        unique_permissions = []
-        seen_ids = set()
-        for permission in permissions:
-            if permission.id not in seen_ids:
-                unique_permissions.append(permission)
-                seen_ids.add(permission.id)
-        
-        return unique_permissions
-    
-    def is_admin(self) -> bool:
-        """检查用户是否为管理员"""
-        return self.has_role('admin') or self.is_superuser
+    # 角色和权限管理方法已移至 UserService
+    # 模型层只保留数据访问和基本验证方法
     
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"

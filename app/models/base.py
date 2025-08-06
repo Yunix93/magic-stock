@@ -31,45 +31,16 @@ class BaseModel(Base):
     __abstract__ = True
     
     # 主键ID，使用UUID
-    id = Column(
-        String(36), 
-        primary_key=True, 
-        default=generate_uuid,
-        comment="主键ID"
-    )
-    
+    id = Column( String(36),  primary_key=True,  default=generate_uuid, comment="主键ID")
     # 创建时间
-    created_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="创建时间"
-    )
-    
+    created_at = Column( DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, comment="创建时间")
     # 更新时间
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="更新时间"
-    )
-    
+    updated_at = Column( DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False,comment="更新时间")
     # 软删除标记
-    is_deleted = Column(
-        Boolean,
-        default=False,
-        nullable=False,
-        comment="是否已删除"
-    )
-    
+    is_deleted = Column( Boolean, default=False, nullable=False, comment="是否已删除")
     # 删除时间
-    deleted_at = Column(
-        DateTime(timezone=True),
-        nullable=True,
-        comment="删除时间"
-    )
-    
+    deleted_at = Column( DateTime(timezone=True), nullable=True, comment="删除时间")
+
     @declared_attr
     def __tablename__(cls):
         """自动生成表名"""

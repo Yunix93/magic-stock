@@ -60,7 +60,7 @@ def init_basic_data():
 
 def init_permissions():
     """初始化基础权限数据"""
-    from app.models.permission import Permission
+    from app.services.permission_service import permission_service
     
     print("  创建基础权限...")
     
@@ -163,22 +163,25 @@ def init_permissions():
     
     created_count = 0
     for perm_data in permissions:
-        # 检查权限是否已存在
-        existing_perm = Permission.get_by_name(perm_data['name'])
-        if not existing_perm:
-            permission = Permission.create_permission(**perm_data)
-            created_count += 1
-            print(f"    ✓ 创建权限: {perm_data['name']}")
-        else:
-            print(f"    - 权限已存在: {perm_data['name']}")
+        try:
+            # 检查权限是否已存在
+            existing_perm = permission_service.get_permission_by_name(perm_data['name'])
+            if not existing_perm:
+                permission = permission_service.create_permission(perm_data)
+                created_count += 1
+                print(f"    ✓ 创建权限: {perm_data['name']}")
+            else:
+                print(f"    - 权限已存在: {perm_data['name']}")
+        except Exception as e:
+            print(f"    ❌ 创建权限失败 {perm_data['name']}: {e}")
     
     print(f"  权限初始化完成，创建了 {created_count} 个权限")
 
 
 def init_roles():
     """初始化基础角色数据"""
-    from app.models.role import Role
-    from app.models.permission import Permission
+    from app.services.role_service import role_service
+    from app.services.permission_service import permission_service
     
     print("  创建基础角色...")
     
@@ -228,40 +231,47 @@ def init_roles():
     
     created_count = 0
     for role_data in roles:
-        # 检查角色是否已存在
-        existing_role = Role.get_by_name(role_data['name'])
-        if not existing_role:
-            # 创建角色
-            permissions = role_data.pop('permissions')
-            role = Role.create_role(**role_data)
-            
-            # 分配权限
-            if permissions == 'all':
-                # 分配所有权限
-                all_permissions = Permission.get_all()
-                for perm in all_permissions:
-                    role.add_permission(perm)
-            elif permissions:
-                # 分配指定权限
-                for perm_name in permissions:
-                    permission = Permission.get_by_name(perm_name)
-                    if permission:
-                        role.add_permission(permission)
-            
-            role.save()
-            created_count += 1
-            print(f"    ✓ 创建角色: {role_data['name']}")
-        else:
-            print(f"    - 角色已存在: {role_data['name']}")
+        try:
+            # 检查角色是否已存在
+            existing_role = role_service.get_role_by_name(role_data['name'])
+            if not existing_role:
+                # 创建角色
+                permissions = role_data.pop('permissions')
+                role = role_service.create_role(role_data)
+                
+                # 分配权限
+                if permissions == 'all':
+                    # 分配所有权限
+                    all_permissions = permission_service.get_permissions_list()
+                    permission_ids = [perm.id for perm in all_permissions['items']]
+                    if permission_ids:
+                        role_service.batch_assign_permissions_to_role(role.id, permission_ids)
+                elif permissions:
+                    # 分配指定权限
+                    permission_ids = []
+                    for perm_name in permissions:
+                        permission = permission_service.get_permission_by_name(perm_name)
+                        if permission:
+                            permission_ids.append(permission.id)
+                    
+                    if permission_ids:
+                        role_service.batch_assign_permissions_to_role(role.id, permission_ids)
+                
+                created_count += 1
+                print(f"    ✓ 创建角色: {role_data['name']}")
+            else:
+                print(f"    - 角色已存在: {role_data['name']}")
+        except Exception as e:
+            print(f"    ❌ 创建角色失败 {role_data['name']}: {e}")
     
     print(f"  角色初始化完成，创建了 {created_count} 个角色")
 
 
 def init_admin_user():
     """初始化管理员用户"""
-    from app.models.user import User
-    from app.models.role import Role
-    from app.models.logs import OperationLog
+    from app.services.user_service import user_service
+    from app.services.role_service import role_service
+    from app.services.log_service import log_service
     
     print("  创建默认管理员用户...")
     
@@ -272,38 +282,44 @@ def init_admin_user():
         'password': 'Admin123456',
         'full_name': '系统管理员',
         'is_active': True,
-        'is_verified': True
+        'is_verified': True,
+        'is_superuser': True
     }
     
-    # 检查管理员用户是否已存在
-    existing_admin = User.get_by_username(admin_data['username'])
-    if not existing_admin:
-        # 创建管理员用户
-        admin_user = User.create_user(**admin_data)
-        
-        # 分配超级管理员角色
-        super_admin_role = Role.get_by_name('super_admin')
-        if super_admin_role:
-            admin_user.add_role(super_admin_role)
-            admin_user.save()
-        
-        # 记录操作日志
-        OperationLog.create_operation_log(
-            user_id=admin_user.id,
-            operation='create',
-            resource='user',
-            details={
-                'action': 'init_admin_user',
-                'username': admin_user.username,
-                'role': 'super_admin'
-            }
-        )
-        
-        print(f"    ✓ 创建管理员用户: {admin_data['username']}")
-        print(f"    ✓ 默认密码: {admin_data['password']}")
-        print("    ⚠️  请在首次登录后修改默认密码！")
-    else:
-        print(f"    - 管理员用户已存在: {admin_data['username']}")
+    try:
+        # 检查管理员用户是否已存在
+        existing_admin = user_service.get_user_by_username(admin_data['username'])
+        if not existing_admin:
+            # 创建管理员用户
+            admin_user = user_service.create_user(admin_data)
+            
+            # 分配超级管理员角色
+            super_admin_role = role_service.get_role_by_name('super_admin')
+            if super_admin_role:
+                user_service.assign_role_to_user(admin_user.id, super_admin_role.id)
+            
+            # 记录操作日志
+            try:
+                log_service.create_operation_log(
+                    user_id=admin_user.id,
+                    operation='create',
+                    resource='user',
+                    details={
+                        'action': 'init_admin_user',
+                        'username': admin_user.username,
+                        'role': 'super_admin'
+                    }
+                )
+            except Exception as log_error:
+                print(f"    ⚠️  记录操作日志失败: {log_error}")
+            
+            print(f"    ✓ 创建管理员用户: {admin_data['username']}")
+            print(f"    ✓ 默认密码: {admin_data['password']}")
+            print("    ⚠️  请在首次登录后修改默认密码！")
+        else:
+            print(f"    - 管理员用户已存在: {admin_data['username']}")
+    except Exception as e:
+        print(f"    ❌ 创建管理员用户失败: {e}")
     
     print("  管理员用户初始化完成")
 

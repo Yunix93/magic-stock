@@ -5,12 +5,19 @@
 """
 
 from .auth_service import AuthService
+from .user_service import UserService, user_service
+from .role_service import RoleService, role_service
+from .permission_service import PermissionService, permission_service
+from .log_service import LogService, log_service
 
 __all__ = [
-    'AuthService'
+    'AuthService',
+    'UserService',
+    'user_service',
+    'RoleService',
+    'role_service',
+    'PermissionService',
+    'permission_service',
+    'LogService',
+    'log_service'
 ]
-
-# 其他服务将在后续任务中添加
-# from .user_service import UserService
-# from .role_service import RoleService  
-# from .log_service import LogService

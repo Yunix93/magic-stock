@@ -60,8 +60,12 @@ def init_login_manager(server):
     @login_manager.user_loader
     def load_user(user_id):
         """用户加载回调"""
-        from app.models.user import User
-        return User.query.get(user_id)
+        try:
+            from app.services.user_service import user_service
+            return user_service.get_user_by_id(user_id)
+        except Exception as e:
+            logger.warning(f"用户加载失败: {e}")
+            return None
     
     @login_manager.unauthorized_handler
     def unauthorized():

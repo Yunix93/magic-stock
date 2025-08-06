@@ -200,7 +200,8 @@ def main():
             
             # 确保所有模型都被导入
             from app.models.user import User
-            from app.models.role import Role, Permission
+            from app.models.role import Role
+            from app.models.permission import Permission
             from app.models.logs import LoginLog, OperationLog
             
             run_all_migrations("upgrade")
@@ -218,7 +219,8 @@ def main():
             
             # 确保所有模型都被导入
             from app.models.user import User
-            from app.models.role import Role, Permission
+            from app.models.role import Role
+            from app.models.permission import Permission
             from app.models.logs import LoginLog, OperationLog
             
             run_all_migrations("downgrade")
@@ -241,6 +243,12 @@ def main():
             from app.models.base import init_database
             database_url = server.config.get('SQLALCHEMY_DATABASE_URI')
             init_database(database_url)
+            
+            # 确保所有模型都被导入
+            from app.models.user import User
+            from app.models.role import Role
+            from app.models.permission import Permission
+            from app.models.logs import LoginLog, OperationLog
             
             run_migration(migration_file, action)
     

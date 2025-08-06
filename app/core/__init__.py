@@ -4,8 +4,9 @@
 包含认证、权限、异常处理等核心功能
 """
 
-from .auth import login_required, permission_required
-from .permissions import Permission, RolePermission
+# 延迟导入避免循环依赖
+# from .auth import login_required, permission_required
+# from .permissions import Permission, RolePermission
 from .exceptions import (
     BaseAppException,
     AuthenticationError,
@@ -41,11 +42,11 @@ from .validators import (
 from .database import get_db_manager
 
 __all__ = [
-    # 认证和权限
-    'login_required',
-    'permission_required',
-    'Permission',
-    'RolePermission',
+    # 认证和权限 (延迟导入)
+    # 'login_required',
+    # 'permission_required',
+    # 'Permission',
+    # 'RolePermission',
     
     # 异常处理
     'BaseAppException',

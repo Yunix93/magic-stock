@@ -10,9 +10,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, Tuple
 from flask import current_app
 from app.models.user import User
-from app.models.logs import LoginLog, OperationLog
 from app.core.exceptions import AuthenticationError, ValidationError
-from app.core.utils import generate_secure_token
+from app.core.utils import generate_secure_token, verify_password
 import logging
 
 logger = logging.getLogger(__name__)
@@ -73,15 +72,9 @@ class AuthService:
                 raise AuthenticationError("账户已被锁定，请稍后再试")
             
             # 验证密码
-            try:
-                if not user.authenticate(password):
-                    self._increment_failed_attempts(user.id, ip_address)
-                    self._log_failed_login(user.id, username, "密码错误", ip_address, user_agent)
-                    raise AuthenticationError("用户名或密码错误")
-            except AuthenticationError as e:
-                # 捕获用户模型抛出的认证异常，统一错误消息
+            if not user.check_password(password):
                 self._increment_failed_attempts(user.id, ip_address)
-                self._log_failed_login(user.id, username, str(e), ip_address, user_agent)
+                self._log_failed_login(user.id, username, "密码错误", ip_address, user_agent)
                 raise AuthenticationError("用户名或密码错误")
             
             # 认证成功，清除失败记录
@@ -97,7 +90,8 @@ class AuthService:
             login_log = self._log_successful_login(user.id, username, ip_address, user_agent, session_id)
             
             # 记录操作日志
-            OperationLog.create_operation_log(
+            from app.services.log_service import log_service
+            log_service.create_operation_log(
                 user_id=user.id,
                 operation="login",
                 resource="system",
@@ -151,7 +145,8 @@ class AuthService:
         
         try:
             # 获取用户信息
-            user = User.get_by_id(user_id)
+            from app.services.user_service import user_service
+            user = user_service.get_user_by_id(user_id)
             if not user:
                 logger.warning(f"登出时用户不存在: {user_id}")
                 return False
@@ -167,7 +162,8 @@ class AuthService:
             self._update_login_log_logout(user_id, session_id)
             
             # 记录操作日志
-            OperationLog.create_operation_log(
+            from app.services.log_service import log_service
+            log_service.create_operation_log(
                 user_id=user_id,
                 operation="logout",
                 resource="system",
@@ -251,7 +247,8 @@ class AuthService:
             
             # 获取用户信息
             user_id = payload.get('user_id')
-            user = User.get_by_id(user_id)
+            from app.services.user_service import user_service
+            user = user_service.get_user_by_id(user_id)
             if not user or not user.is_active:
                 logger.warning(f"刷新令牌对应的用户无效: {user_id}")
                 return None
@@ -306,17 +303,19 @@ class AuthService:
         if not user_id:
             return None
         
-        return User.get_by_id(user_id)
+        from app.services.user_service import user_service
+        return user_service.get_user_by_id(user_id)
     
     def _find_user(self, username: str) -> Optional[User]:
         """查找用户（支持用户名和邮箱）"""
+        from app.services.user_service import user_service
         # 先尝试用户名查找
-        user = User.get_by_username(username)
+        user = user_service.get_user_by_username(username)
         if user:
             return user
         
         # 再尝试邮箱查找
-        user = User.get_by_email(username)
+        user = user_service.get_user_by_email(username)
         return user
     
     def _generate_tokens(self, user: User, session_id: str = None) -> Tuple[str, str]:
@@ -504,9 +503,10 @@ class AuthService:
     
     def _log_successful_login(self, user_id: str, username: str, 
                             ip_address: str = None, user_agent: str = None,
-                            session_id: str = None) -> LoginLog:
+                            session_id: str = None):
         """记录成功登录日志"""
-        return LoginLog.create_login_log(
+        from app.services.log_service import log_service
+        return log_service.create_login_log(
             user_id=user_id,
             ip_address=ip_address,
             user_agent=user_agent,
@@ -516,7 +516,8 @@ class AuthService:
     def _log_failed_login(self, user_id: str, username: str, reason: str,
                          ip_address: str = None, user_agent: str = None):
         """记录失败登录日志"""
-        LoginLog.create_login_log(
+        from app.services.log_service import log_service
+        log_service.create_login_log(
             user_id=user_id,
             ip_address=ip_address,
             user_agent=user_agent,
@@ -526,12 +527,12 @@ class AuthService:
     def _update_login_log_logout(self, user_id: str, session_id: str = None):
         """更新登录日志的登出时间"""
         try:
+            from app.services.log_service import log_service
             # 查找最近的成功登录日志
-            recent_logs = LoginLog.get_by_user(user_id, limit=10)
+            recent_logs, _ = log_service.get_login_logs_by_user(user_id, page=1, per_page=10)
             for log in recent_logs:
                 if log.status == "success" and log.logout_time is None:
-                    log.set_logout()
-                    log.save()
+                    log_service.update_logout_time(log.id)
                     break
         except Exception as e:
             logger.warning(f"更新登录日志失败: {e}")

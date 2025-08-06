@@ -108,14 +108,34 @@ class ScriptUtils:
         """获取数据库统计信息"""
         try:
             with self.server.app_context():
-                from app.models import User, Role, Permission, LoginLog, OperationLog
+                from app.services.user_service import user_service
+                from app.services.role_service import role_service
+                from app.services.permission_service import permission_service
+                from app.services.log_service import log_service
+                
+                # 使用服务层获取统计数据
+                user_stats = user_service.get_user_statistics()
+                role_stats = role_service.get_role_statistics()
+                permission_stats = permission_service.get_permission_statistics()
+                
+                # 获取日志统计
+                login_logs_count = 0
+                operation_logs_count = 0
+                try:
+                    recent_login_logs = log_service.get_login_logs(limit=10000)
+                    login_logs_count = len(recent_login_logs.get('items', []))
+                    
+                    recent_operation_logs = log_service.get_operation_logs(limit=10000)
+                    operation_logs_count = len(recent_operation_logs.get('items', []))
+                except Exception as log_error:
+                    print(f"⚠️  获取日志统计失败: {log_error}")
                 
                 stats = {
-                    'users': len(User.get_all()),
-                    'roles': len(Role.get_all()),
-                    'permissions': len(Permission.get_all()),
-                    'login_logs': len(LoginLog.get_recent_logs(hours=24*365, limit=10000)),
-                    'operation_logs': len(OperationLog.get_recent_logs(hours=24*365, limit=10000))
+                    'users': user_stats.get('total_users', 0),
+                    'roles': role_stats.get('total_roles', 0),
+                    'permissions': permission_stats.get('total_permissions', 0),
+                    'login_logs': login_logs_count,
+                    'operation_logs': operation_logs_count
                 }
                 
                 return stats
@@ -171,20 +191,29 @@ class ScriptUtils:
         """检查管理员账户"""
         try:
             with self.server.app_context():
-                from app.models.user import User
+                from app.services.user_service import user_service
                 
-                admin_user = User.get_by_username('admin')
+                admin_user = user_service.get_user_by_username('admin')
                 
                 if admin_user:
-                    roles = admin_user.get_roles()
+                    # 获取用户角色
+                    try:
+                        user_roles = user_service.get_user_roles(admin_user.id)
+                        role_count = len(user_roles)
+                        role_names = [role.name for role in user_roles]
+                    except Exception as role_error:
+                        print(f"⚠️  获取用户角色失败: {role_error}")
+                        role_count = 0
+                        role_names = []
+                    
                     return {
                         'exists': True,
                         'username': admin_user.username,
                         'email': admin_user.email,
                         'is_active': admin_user.is_active,
                         'is_verified': admin_user.is_verified,
-                        'role_count': len(roles),
-                        'roles': [role.name for role in roles]
+                        'role_count': role_count,
+                        'roles': role_names
                     }
                 else:
                     return {'exists': False}

@@ -13,6 +13,8 @@ class UserStatus(Enum):
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
     PENDING = "pending"
+    LOCKED = "locked"
+    DELETED = "deleted"
 
 
 class UserRole(Enum):
@@ -21,6 +23,18 @@ class UserRole(Enum):
     MANAGER = "manager"
     USER = "user"
     GUEST = "guest"
+
+
+class RoleType(Enum):
+    """角色类型枚举"""
+    SYSTEM = "system"
+    CUSTOM = "custom"
+
+
+class PermissionType(Enum):
+    """权限类型枚举"""
+    SYSTEM = "system"
+    CUSTOM = "custom"
 
 
 class LogLevel(Enum):
