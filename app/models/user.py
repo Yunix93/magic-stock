@@ -171,9 +171,10 @@ class User(BaseModel):
         # 处理密码
         if 'password' in kwargs:
             password = kwargs.pop('password')
-            # 先调用父类初始化，然后设置密码
+            # 先调用父类初始化，然后设置密码哈希
+            from app.core.utils import hash_password
+            kwargs['password_hash'] = hash_password(password)
             super().__init__(**kwargs)
-            self.set_password(password)
             return
         
         super().__init__(**kwargs)
