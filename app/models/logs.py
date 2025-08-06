@@ -22,50 +22,12 @@ class LoginLog(BaseModel):
     
     __tablename__ = "login_logs"
     
-    # 用户信息
-    user_id = Column(
-        String(36),
-        ForeignKey('users.id', ondelete='SET NULL'),
-        nullable=True,
-        index=True,
-        comment="用户ID"
-    )
-    
-    # 登录信息
-    ip_address = Column(
-        String(45),  # IPv6最大长度
-        nullable=True,
-        index=True,
-        comment="IP地址"
-    )
-    
-    user_agent = Column(
-        Text,
-        nullable=True,
-        comment="用户代理字符串"
-    )
-    
-    status = Column(
-        String(20),
-        nullable=False,
-        index=True,
-        comment="登录状态：success, failed"
-    )
-    
-    login_time = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        index=True,
-        comment="登录时间"
-    )
-    
-    logout_time = Column(
-        DateTime(timezone=True),
-        nullable=True,
-        comment="登出时间"
-    )
-    
+    user_id = Column(String(36), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True, comment="用户ID")
+    ip_address = Column(String(45), nullable=True, index=True, comment="IP地址" )
+    user_agent = Column(Text, nullable=True, comment="用户代理字符串")
+    status = Column(String(20), nullable=False, index=True, comment="登录状态：success, failed" )
+    login_time = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True, comment="登录时间")
+    logout_time = Column(DateTime(timezone=True), nullable=True, comment="登出时间")
     # 关系定义
     user = relationship("User", back_populates="login_logs")
     
@@ -153,52 +115,15 @@ class OperationLog(BaseModel):
     __tablename__ = "operation_logs"
     
     # 用户信息
-    user_id = Column(
-        String(36),
-        ForeignKey('users.id', ondelete='SET NULL'),
-        nullable=True,
-        index=True,
-        comment="操作用户ID"
-    )
-    
+    user_id = Column(String(36),ForeignKey('users.id', ondelete='SET NULL'),nullable=True,index=True,comment="操作用户ID")
     # 操作信息
-    operation = Column(
-        String(50),
-        nullable=False,
-        index=True,
-        comment="操作类型"
-    )
-    
-    resource = Column(
-        String(50),
-        nullable=False,
-        index=True,
-        comment="操作资源"
-    )
-    
-    details = Column(
-        JSON,
-        nullable=True,
-        comment="操作详情（JSON格式）"
-    )
-    
+    operation = Column(String(50),nullable=False,index=True,comment="操作类型")
+    resource = Column(String(50),nullable=False,index=True,comment="操作资源")
+    details = Column(JSON,nullable=True,comment="操作详情（JSON格式）")
     # 客户端信息
-    ip_address = Column(
-        String(45),
-        nullable=True,
-        index=True,
-        comment="客户端IP地址"
-    )
-    
+    ip_address = Column(String(45),nullable=True,index=True,comment="客户端IP地址")
     # 时间信息
-    created_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        index=True,
-        comment="操作时间"
-    )
-    
+    created_at = Column(DateTime(timezone=True),default=lambda: datetime.now(timezone.utc),nullable=False,index=True,comment="操作时间")
     # 关系定义
     user = relationship("User", back_populates="operation_logs")
     

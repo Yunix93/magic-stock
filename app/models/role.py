@@ -23,43 +23,14 @@ class Role(BaseModel):
     __tablename__ = DatabaseTables.ROLES
     
     # 基本信息字段
-    name = Column(
-        String(50),
-        unique=True,
-        nullable=False,
-        index=True,
-        comment="角色名称"
-    )
-    
-    description = Column(
-        Text,
-        nullable=True,
-        comment="角色描述"
-    )
-    
+    name = Column( String(50), unique=True, nullable=False, index=True, comment="角色名称")
+    description = Column( Text, nullable=True, comment="角色描述")
     # 状态字段
-    is_active = Column(
-        Boolean,
-        default=True,
-        nullable=False,
-        comment="是否激活"
-    )
-    
+    is_active = Column( Boolean, default=True, nullable=False, comment="是否激活")
     # 系统字段
-    is_system = Column(
-        Boolean,
-        default=False,
-        nullable=False,
-        comment="是否为系统角色"
-    )
-    
+    is_system = Column( Boolean, default=False, nullable=False, comment="是否为系统角色")
     # 排序字段
-    sort_order = Column(
-        String(10),
-        default="0",
-        nullable=False,
-        comment="排序顺序"
-    )
+    sort_order = Column( String(10), default="0", nullable=False, comment="排序顺序")
     
     # 关系定义
     # users = relationship("User", secondary="user_roles", back_populates="roles")

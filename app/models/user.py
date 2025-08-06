@@ -24,121 +24,28 @@ class User(BaseModel):
     __tablename__ = DatabaseTables.USERS
     
     # 基本信息字段
-    username = Column(
-        String(50),
-        unique=True,
-        nullable=False,
-        index=True,
-        comment="用户名"
-    )
-    
-    email = Column(
-        String(254),
-        unique=True,
-        nullable=False,
-        index=True,
-        comment="邮箱地址"
-    )
-    
-    password_hash = Column(
-        String(255),
-        nullable=False,
-        comment="密码哈希值"
-    )
-    
-    full_name = Column(
-        String(100),
-        nullable=True,
-        comment="真实姓名"
-    )
-    
+    username = Column( String(50), unique=True, nullable=False, index=True, comment="用户名")
+    email = Column( String(254), unique=True, nullable=False, index=True, comment="邮箱地址")
+    password_hash = Column( String(255), nullable=False, comment="密码哈希值")
+    full_name = Column( String(100), nullable=True, comment="真实姓名")
     # 状态管理字段
-    is_active = Column(
-        Boolean,
-        default=True,
-        nullable=False,
-        comment="是否激活"
-    )
-    
-    is_verified = Column(
-        Boolean,
-        default=False,
-        nullable=False,
-        comment="是否已验证邮箱"
-    )
-    
-    is_superuser = Column(
-        Boolean,
-        default=False,
-        nullable=False,
-        comment="是否为超级管理员"
-    )
-    
+    is_active = Column( Boolean, default=True, nullable=False, comment="是否激活")
+    is_verified = Column( Boolean, default=False, nullable=False, comment="是否已验证邮箱")
+    is_superuser = Column( Boolean, default=False, nullable=False, comment="是否为超级管理员")
     # 时间戳字段
-    last_login = Column(
-        DateTime(timezone=True),
-        nullable=True,
-        comment="最后登录时间"
-    )
-    
-    password_changed_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="密码修改时间"
-    )
-    
+    last_login = Column( DateTime(timezone=True), nullable=True, comment="最后登录时间")
+    password_changed_at = Column( DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, comment="密码修改时间")
     # 安全字段
-    failed_login_attempts = Column(
-        String(10),
-        default="0",
-        nullable=False,
-        comment="失败登录次数"
-    )
-    
-    locked_until = Column(
-        DateTime(timezone=True),
-        nullable=True,
-        comment="账户锁定到期时间"
-    )
-    
+    failed_login_attempts = Column( String(10), default="0", nullable=False, comment="失败登录次数")
+    locked_until = Column( DateTime(timezone=True), nullable=True, comment="账户锁定到期时间")
     # 扩展信息字段
-    avatar_url = Column(
-        String(500),
-        nullable=True,
-        comment="头像URL"
-    )
-    
-    phone = Column(
-        String(20),
-        nullable=True,
-        comment="手机号码"
-    )
-    
-    bio = Column(
-        Text,
-        nullable=True,
-        comment="个人简介"
-    )
-    
+    avatar_url = Column( String(500), nullable=True, comment="头像URL")
+    phone = Column( String(20), nullable=True, comment="手机号码")
+    bio = Column( Text, nullable=True, comment="个人简介")
     # 系统字段
-    verification_token = Column(
-        String(255),
-        nullable=True,
-        comment="邮箱验证令牌"
-    )
-    
-    reset_token = Column(
-        String(255),
-        nullable=True,
-        comment="密码重置令牌"
-    )
-    
-    reset_token_expires = Column(
-        DateTime(timezone=True),
-        nullable=True,
-        comment="重置令牌过期时间"
-    )
+    verification_token = Column( String(255), nullable=True, comment="邮箱验证令牌")
+    reset_token = Column( String(255), nullable=True, comment="密码重置令牌")
+    reset_token_expires = Column( DateTime(timezone=True), nullable=True, comment="重置令牌过期时间")
     
     # 关系定义
     # roles = relationship("Role", secondary="user_roles", back_populates="users")

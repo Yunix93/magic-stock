@@ -23,33 +23,10 @@ class Permission(BaseModel):
     __tablename__ = DatabaseTables.PERMISSIONS
     
     # 基本信息字段
-    name = Column(
-        String(100),
-        unique=True,
-        nullable=False,
-        index=True,
-        comment="权限名称"
-    )
-    
-    resource = Column(
-        String(50),
-        nullable=False,
-        index=True,
-        comment="资源名称"
-    )
-    
-    action = Column(
-        String(50),
-        nullable=False,
-        index=True,
-        comment="操作类型"
-    )
-    
-    description = Column(
-        Text,
-        nullable=True,
-        comment="权限描述"
-    )
+    name = Column( String(100), unique=True, nullable=False, index=True, comment="权限名称")
+    resource = Column( String(50), nullable=False, index=True, comment="资源名称")
+    action = Column( String(50), nullable=False, index=True, comment="操作类型")
+    description = Column( Text, nullable=True, comment="权限描述")
     
     # 分组字段
     group = Column(
